@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import fetch_recent, persist
@@ -114,6 +114,40 @@ def analyze(
     history.insert(0, response)
     persist(response.model_dump())
     return response
+
+
+@app.post("/api/resume/upload")
+async def upload_resume(
+    resume_file: UploadFile = File(...),
+    authorization: Optional[str] = Header(default=None),
+) -> dict[str, str]:
+    _require_user(authorization)
+
+    filename = (resume_file.filename or "").lower()
+    if not filename.endswith((".pdf", ".txt")):
+        raise HTTPException(status_code=400, detail="Upload a PDF or TXT resume")
+
+    contents = await resume_file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="The uploaded resume is empty")
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Resume must be smaller than 5 MB")
+
+    if filename.endswith(".txt"):
+        text = contents.decode("utf-8", errors="replace").strip()
+    else:
+        try:
+            from pypdf import PdfReader
+            from io import BytesIO
+
+            reader = PdfReader(BytesIO(contents))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+        except Exception as error:
+            raise HTTPException(status_code=400, detail="Unable to read this PDF resume") from error
+
+    if len(text) < 40:
+        raise HTTPException(status_code=400, detail="Could not extract enough text from this resume")
+    return {"text": text}
 
 
 @app.get("/api/analyses", response_model=list[AnalysisResponse])

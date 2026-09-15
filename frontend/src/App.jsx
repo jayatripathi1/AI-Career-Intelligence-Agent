@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight, BarChart3, Check, ChevronRight, ClipboardCheck,
   FileText, Github, LayoutDashboard, Loader2, Menu, MessageSquare,
@@ -23,7 +23,20 @@ function App() {
   const [role, setRole] = useState("Senior Product Engineer");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+
+  useEffect(() => {
+    if (!auth?.token) return;
+    fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    }).then(response => {
+      if (response.status === 401) {
+        localStorage.removeItem("careerpilot_auth");
+        setAuth(null);
+      }
+    }).catch(error => console.error("Unable to validate session", error));
+  }, [auth?.token]);
 
   if (!auth) {
     return <AuthScreen mode={authMode} setMode={setAuthMode} onAuthenticated={(session) => {
@@ -48,6 +61,30 @@ function App() {
     } finally { setLoading(false); }
   };
 
+  const uploadResume = async (file) => {
+    if (!file) return;
+    setUploadError("");
+    const formData = new FormData();
+    formData.append("resume_file", file);
+    try {
+      const response = await fetch(`${API_URL}/api/resume/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${auth.token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.status === 401) {
+        localStorage.removeItem("careerpilot_auth");
+        setAuth(null);
+        return;
+      }
+      if (!response.ok) throw new Error(data.detail || "Unable to upload resume");
+      setResume(data.text);
+    } catch (error) {
+      setUploadError(error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900">
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
@@ -62,7 +99,7 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-10 lg:px-10 lg:py-14">
-        {!result ? <Landing resume={resume} setResume={setResume} job={job} setJob={setJob} role={role} setRole={setRole} analyze={analyze} loading={loading} />
+        {!result ? <Landing resume={resume} setResume={setResume} job={job} setJob={setJob} role={role} setRole={setRole} analyze={analyze} loading={loading} uploadResume={uploadResume} uploadError={uploadError} />
           : <Results result={result} reset={() => setResult(null)} />}
       </main>
       <footer className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-8 text-xs text-slate-400 lg:px-10"><span>© 2026 CareerPilot · Private by design</span><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Analysis engine operational</span></footer>
@@ -117,21 +154,22 @@ function AuthScreen({ mode, setMode, onAuthenticated }) {
   </div>;
 }
 
-function Landing({ resume, setResume, job, setJob, role, setRole, analyze, loading }) {
+function Landing({ resume, setResume, job, setJob, role, setRole, analyze, loading, uploadResume, uploadError }) {
   return <div id="workspace">
     <div className="mb-12 max-w-3xl"><div className="eyebrow"><Zap size={13} fill="currentColor" /> AI CAREER INTELLIGENCE</div><h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-[-.04em] text-slate-950 md:text-6xl">Turn your experience into your <span className="gradient-text">next opportunity.</span></h1><p className="mt-5 max-w-2xl text-base leading-7 text-slate-500 md:text-lg">CareerPilot reads between the lines of your resume and a job description to reveal your strongest match, blind spots, and exactly what to do next.</p></div>
     <div className="grid gap-6 xl:grid-cols-[1fr_1fr_300px]">
-      <InputCard icon={<FileText size={18} />} title="Your resume" hint="Paste your resume or upload a PDF" value={resume} onChange={setResume} placeholder="Paste your resume here..." />
+      <InputCard icon={<FileText size={18} />} title="Your resume" hint="Paste your resume or upload a PDF" value={resume} onChange={setResume} onUpload={uploadResume} placeholder="Paste your resume here..." />
       <InputCard icon={<Target size={18} />} title="Target opportunity" hint="Paste the job description" value={job} onChange={setJob} placeholder="Paste a job description here..." />
       <aside className="space-y-5"><div className="panel p-5"><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Target role</p><input className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" value={role} onChange={e => setRole(e.target.value)} /><div className="mt-5 flex items-center gap-2 text-xs text-slate-400"><div className="flex -space-x-2"><span className="mini-avatar bg-violet-200">A</span><span className="mini-avatar bg-sky-200">M</span><span className="mini-avatar bg-amber-200">J</span></div> Join 2,400+ ambitious builders</div></div><div className="panel bg-slate-950 p-5 text-white"><Sparkles className="text-violet-300" size={20} /><p className="mt-4 text-sm font-semibold">What you’ll get</p><ul className="mt-3 space-y-3 text-xs leading-5 text-slate-400"><li className="flex gap-2"><Check size={14} className="mt-0.5 text-emerald-400" />Match score with evidence</li><li className="flex gap-2"><Check size={14} className="mt-0.5 text-emerald-400" />Skill gaps to close</li><li className="flex gap-2"><Check size={14} className="mt-0.5 text-emerald-400" />Personalized interview prep</li></ul></div></aside>
     </div>
+    {uploadError && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{uploadError}</p>}
     <div className="mt-7 flex flex-col items-center justify-between gap-4 sm:flex-row"><button className="btn-link" onClick={() => { setResume(sampleResume); setJob(sampleJob); }}>Try with sample data <ArrowUpRight size={15} /></button><button className="btn-primary w-full sm:w-auto" disabled={loading || !resume.trim() || !job.trim()} onClick={analyze}>{loading ? <><Loader2 className="animate-spin" size={17} /> Analyzing your fit...</> : <><Sparkles size={17} /> Analyze my opportunity <ChevronRight size={17} /></>}</button></div>
     <div id="how-it-works" className="mt-24 grid gap-4 border-t border-slate-200 pt-8 md:grid-cols-3"><Step icon={<ClipboardCheck />} title="Understand your profile" body="We extract the skills, impact, and signals that make your experience unique." n="01" /><Step icon={<BarChart3 />} title="Find the signal gap" body="Semantic retrieval compares your evidence to what the role actually needs." n="02" /><Step icon={<MessageSquare />} title="Build your advantage" body="Get a practical plan and interview questions built around your gaps." n="03" /></div>
   </div>;
 }
 
-function InputCard({ icon, title, hint, value, onChange, placeholder }) {
-  return <div className="panel flex min-h-[330px] flex-col p-5"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="icon-box">{icon}</div><div><h2 className="text-sm font-bold">{title}</h2><p className="mt-1 text-xs text-slate-400">{hint}</p></div></div><button className="upload"><Upload size={14} /> Upload</button></div><textarea className="mt-5 flex-1 resize-none rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 outline-none transition placeholder:text-slate-300 focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-50" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} /><p className="mt-3 text-right text-[11px] text-slate-400">{value.length.toLocaleString()} characters</p></div>;
+function InputCard({ icon, title, hint, value, onChange, onUpload, placeholder }) {
+  return <div className="panel flex min-h-[330px] flex-col p-5"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="icon-box">{icon}</div><div><h2 className="text-sm font-bold">{title}</h2><p className="mt-1 text-xs text-slate-400">{hint}</p></div></div>{onUpload && <label className="upload cursor-pointer"><Upload size={14} /> Upload<input className="hidden" type="file" accept=".pdf,.txt,application/pdf,text/plain" onChange={e => { onUpload(e.target.files?.[0]); e.target.value = ""; }} /></label>}</div><textarea className="mt-5 flex-1 resize-none rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm leading-6 outline-none transition placeholder:text-slate-300 focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-50" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} /><p className="mt-3 text-right text-[11px] text-slate-400">{value.length.toLocaleString()} characters</p></div>;
 }
 function Step({ icon, title, body, n }) { return <div className="flex gap-4"><span className="step-num">{n}</span><div><div className="mb-3 text-violet-600">{icon}</div><h3 className="text-sm font-bold">{title}</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">{body}</p></div></div>; }
 function Results({ result, reset }) {
