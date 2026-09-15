@@ -137,7 +137,7 @@ Error generating stack: `+i.message+`
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
- */const Ya=Le("Zap",[["path",{d:"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",key:"1xq2db"}]]),Ml="http://localhost:8000",fd=`Jordan Lee
+ */const Ya=Le("Zap",[["path",{d:"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",key:"1xq2db"}]]),Ml="https://ai-career-intelligence-agent-1.onrender.com",fd=`Jordan Lee
 Product-minded software engineer with 4 years of experience building customer-facing products.
 Experience: Built a Python/FastAPI platform used by 40k monthly users; led React migration that improved activation 24%.
 Skills: Python, FastAPI, React, TypeScript, PostgreSQL, Docker, AWS, analytics, stakeholder communication.`,dd=`Senior Product Engineer

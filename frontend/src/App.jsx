@@ -5,7 +5,7 @@ import {
   Sparkles, Target, Upload, UserRound, X, Zap,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "https://ai-career-intelligence-agent-1.onrender.com";
 const sampleResume = `Jordan Lee
 Product-minded software engineer with 4 years of experience building customer-facing products.
 Experience: Built a Python/FastAPI platform used by 40k monthly users; led React migration that improved activation 24%.
